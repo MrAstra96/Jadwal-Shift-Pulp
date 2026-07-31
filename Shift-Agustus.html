@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Pergantian Shift - DELTA</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #eef1f6;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .topbar {
+    background: #b45309;
+    color: #fff;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar .logo { font-size: 22px; font-weight: 800; letter-spacing: 1px; }
+  .topbar .badge {
+    background: #fff;
+    color: #b45309;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  .shift-card {
+    background: #fff;
+    border: 1px solid #dbe0ea;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .shift-card.current {
+    border: 2px solid #b45309;
+    background: #fef6ec;
+  }
+
+  .label {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .shift-title {
+    font-size: 30px;
+    font-weight: 800;
+    color: #16213e;
+    margin-bottom: 6px;
+  }
+  .shift-time {
+    color: #64748b;
+    font-size: 15px;
+    margin-bottom: 14px;
+  }
+  .group-badge {
+    display: inline-block;
+    background: #b45309;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+    margin-right: 6px;
+  }
+  .member-list { margin-top: 12px; }
+  .member-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eef1f6;
+  }
+  .member-row:last-child { border-bottom: none; }
+  .member-name { font-size: 15px; color: #16213e; font-weight: 500; }
+  .wa-link {
+    color: #16a34a;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .empty-note {
+    color: #94a3b8;
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 8px;
+  }
+
+  .nonshift-card {
+    background: #fff;
+    border: 1px solid #dbe0ea;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .status-pill {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+  }
+  .status-masuk { background: #dcfce7; color: #166534; }
+  .status-libur { background: #fee2e2; color: #991b1b; }
+
+  .libur-card {
+    background: #fff;
+    border: 1px solid #dbe0ea;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .libur-card .label { color: #b91c1c; }
+  .libur-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eef1f6;
+    font-size: 15px;
+    color: #16213e;
+    font-weight: 500;
+  }
+  .libur-name:last-child { border-bottom: none; }
+  .libur-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #dc2626;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">TEAM FINISHEDGOOD</span>
+</div>
+
+<div class="wrap" id="wrap">
+  <!-- Kartu akan dibuat otomatis lewat JavaScript -->
+</div>
+
+<script>
+  /* ===================== KONFIGURASI ===================== */
+  // Jam mulai tiap shift (format 24 jam)
+  const SHIFT_TIMES = {
+    1: { start: "07:00", end: "15:00" },
+    2: { start: "15:00", end: "23:00" },
+    3: { start: "23:00", end: "07:00" }
+  };
+
+  const BULAN = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+
+  // Nomor WhatsApp per NIK (isi manual, format 62xxxxxxxxxx). Kosongkan jika belum ada.
+  const NOMOR_WA = {
+    "2003532": "628559886826",
+    "2002977": "6289671449135",
+    "2003527": "6289628790901",
+    "2002933": "6283872583819",
+    "2002954": "6288973995178",
+    "AGI2026": "6282121207905"
+  };
+
+  // Data jadwal per bulan, key format "TAHUN-BULAN(1-indexed)"
+  const JADWAL_BULANAN = {
+    "2026-7": [
+      { nik: "2003532", nama: "ASSYIFA KHALIF",
+        jadwal: ["2B03","1B02","1B02","1B03","OFF","3B04","3B04","3B04","2B03","2B03","2B04","OFF","OFF","1B02","1B02","3B04",
+                 "3B04","2B03","2B04","OFF","2B03","2B03","1B02","1B02","1B02","3B05","OFF","3B04","3B04","2B03","2B03"] },
+      { nik: "2002977", nama: "YOGA",
+        jadwal: ["2B04","OFF","1B02","1B02","3B04","3B04","3B04","3B05","OFF","2B03","2B03","1B02","1B02","1B02","1B03","OFF",
+                 "OFF","3B04","2B03","2B03","2B03","2B03","1B03","OFF","3B04","3B04","3B04","3B04","3B04","2B04","OFF"] },
+      { nik: "2003527", nama: "FARHAN RAMADAN",
+        jadwal: ["3B04","2B03","3B05","OFF","1B02","1B02","1B02","1B02","3B04","3B05","OFF","2B03","2B03","2B03","2B03","1B02",
+                 "2B04","OFF","OFF","3B04","3B04","3B04","2B03","2B03","2B04","OFF","1B02","1B02","1B02","3B04","3B04"] },
+      { nik: "2002933", nama: "KHAERUL ANWAR",
+        jadwal: ["3B04","2B03","2B03","2B03","1B02","1B03","OFF","1B02","3B04","3B04","3B04","2B03","2B04","OFF","2B03","1B02",
+                 "1B02","1B02","3B04","3B05","OFF","OFF","2B03","2B03","2B03","1B02","1B02","1B03","OFF","3B04","3B04"] },
+      { nik: "2002954", nama: "M ZIDANE S",
+        jadwal: ["1B02","3B05","OFF","3B04","2B03","2B03","2B03","2B03","1B03","OFF","1B02","3B04","3B04","3B04","3B04","2B04",
+                 "OFF","OFF","1B02","1B02","1B02","1B02","3B04","3B05","OFF","2B03","2B03","2B03","2B03","1B02","1B03"] }
+    ],
+    "2026-8": [
+      { nik: "2003532", nama: "ASSYIFA KHALIF",
+        jadwal: ["1B02","1B03","OFF","1B02","1B02","3B04","3B04","3B04","2B04","OFF","2B03","2B03","1B02","1B02","1B02","3B05",
+                 "OFF","3B04","3B04","2B03","2B03","1B02","1B03","OFF","1B02","1B02","3B04","3B04","3B04","2B04","OFF"] },
+      { nik: "2002977", nama: "YOGA",
+        jadwal: ["2B03","1B02","1B02","1B02","1B02","3B05","OFF","2B03","2B03","2B03","2B03","2B03","1B03","OFF","3B04","3B04",
+                 "3B04","3B04","3B04","2B04","OFF","2B03","1B02","1B02","1B02","1B02","3B05","OFF","2B03","2B03","2B03"] },
+      { nik: "2003527", nama: "FARHAN RAMADAN",
+        jadwal: ["3B05","OFF","2B03","2B03","2B03","1B02","1B02","1B03","OFF","3B04","3B04","3B04","2B03","2B03","2B04","OFF",
+                 "1B02","1B02","1B02","3B04","3B04","3B05","OFF","2B03","2B03","2B03","1B02","1B02","1B03","OFF","3B04"] },
+      { nik: "2002933", nama: "KHAERUL ANWAR",
+        jadwal: ["3B04","2B03","2B03","2B04","OFF","1B02","1B02","1B02","3B04","3B04","3B05","OFF","2B03","2B03","2B03","1B02",
+                 "1B02","1B03","OFF","3B04","3B04","3B04","2B03","2B03","2B04","OFF","1B02","1B02","1B02","3B04","3B04"] },
+      { nik: "2002954", nama: "M ZIDANE S",
+        jadwal: ["OFF","3B04","3B04","3B04","3B04","2B03","2B04","OFF","1B02","1B02","1B02","1B02","3B04","3B05","OFF","2B03",
+                 "2B03","2B03","2B03","1B02","1B03","OFF","3B04","3B04","3B04","3B04","2B03","2B04","OFF","1B02","1B02"] }
+    ]
+  };
+
+  // Pegawai non-shift (jam kerja tetap, bukan bagian rotasi shift 1/2/3)
+  const NON_SHIFT_LIST = [
+    { nik: "AGI2026", nama: "AGI AGNIA HILMAN", jamMulai: "08:00", jamSelesai: "17:00" }
+    // Libur: Sabtu, Minggu, dan tanggal merah nasional (tanggal merah perlu ditambah manual jika ada)
+  ];
+
+  /* ===================== LOGIKA SHIFT ===================== */
+
+  function addDays(date, n) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  // Menentukan shift yang berlaku pada suatu waktu (Date), dan "tanggal data" jadwalnya
+  function getShiftAt(date) {
+    const h = date.getHours();
+    if (h >= 7 && h < 15) return { shiftNum: 1, dataDate: date };
+    if (h >= 15 && h < 23) return { shiftNum: 2, dataDate: date };
+    if (h >= 23) return { shiftNum: 3, dataDate: date };
+    // h < 7 pagi: masih bagian shift 3 yang mulai tanggal sebelumnya
+    return { shiftNum: 3, dataDate: addDays(date, -1) };
+  }
+
+  // Shift sebelum & sesudah, berurutan: 1 -> 2 -> 3 -> 1(besok) -> ...
+  function getPrevShift(shiftNum, dataDate) {
+    if (shiftNum === 1) return { shiftNum: 3, dataDate: addDays(dataDate, -1) };
+    if (shiftNum === 2) return { shiftNum: 1, dataDate: dataDate };
+    return { shiftNum: 2, dataDate: dataDate };
+  }
+  function getNextShift(shiftNum, dataDate) {
+    if (shiftNum === 1) return { shiftNum: 2, dataDate: dataDate };
+    if (shiftNum === 2) return { shiftNum: 3, dataDate: dataDate };
+    return { shiftNum: 1, dataDate: addDays(dataDate, 1) };
+  }
+
+  // Ambil kode jadwal untuk 1 pegawai pada tanggal tertentu, cari di bulan yang sesuai
+  function getCodeForDate(nik, date) {
+    const key = date.getFullYear() + "-" + (date.getMonth() + 1);
+    const list = JADWAL_BULANAN[key];
+    if (!list) return null;
+    const peg = list.find(p => p.nik === nik);
+    if (!peg) return null;
+    const idx = date.getDate() - 1;
+    return peg.jadwal[idx] || null;
+  }
+
+  // Kumpulkan pegawai yang bertugas pada shift+tanggal tertentu, dikelompokkan per kode
+  function getGroupsFor(shiftNum, date) {
+    const key = date.getFullYear() + "-" + (date.getMonth() + 1);
+    const list = JADWAL_BULANAN[key] || [];
+    const groups = {};
+    list.forEach(peg => {
+      const code = getCodeForDate(peg.nik, date);
+      if (!code || code === "OFF") return;
+      if (!code.startsWith(String(shiftNum))) return;
+      if (!groups[code]) groups[code] = [];
+      groups[code].push(peg);
+    });
+    return groups;
+  }
+
+  function formatDateLabel(date) {
+    return date.getDate() + " " + BULAN[date.getMonth()];
+  }
+
+  /* ===================== RENDER UI ===================== */
+
+  function waButtonHtml(nik) {
+    const nomor = NOMOR_WA[nik];
+    if (nomor) {
+      return `<a class="wa-link" href="https://wa.me/${nomor}" target="_blank">📱 WhatsApp</a>`;
+    }
+    return `<span class="wa-link" style="color:#cbd5e1;">📱 -</span>`;
+  }
+
+  function renderCard(labelText, shiftNum, dataDate, isCurrent) {
+    const times = SHIFT_TIMES[shiftNum];
+    const groups = getGroupsFor(shiftNum, dataDate);
+    const groupCodes = Object.keys(groups);
+
+    let groupsHtml = "";
+    if (groupCodes.length === 0) {
+      groupsHtml = `<p class="empty-note">Tidak ada data pegawai untuk shift ini.</p>`;
+    } else {
+      groupCodes.forEach(code => {
+        const members = groups[code];
+        groupsHtml += `<span class="group-badge">Group ${code}</span>`;
+        groupsHtml += `<div class="member-list">`;
+        members.forEach(peg => {
+          groupsHtml += `
+            <div class="member-row">
+              <span class="member-name">${peg.nama}</span>
+              ${waButtonHtml(peg.nik)}
+            </div>`;
+        });
+        groupsHtml += `</div>`;
+      });
+    }
+
+    return `
+      <div class="shift-card ${isCurrent ? "current" : ""}">
+        <div class="label">${labelText}</div>
+        <div class="shift-title">Shift ${shiftNum}</div>
+        <div class="shift-time">${times.start} – ${times.end} · ${formatDateLabel(dataDate)}</div>
+        ${groupsHtml}
+      </div>`;
+  }
+
+  function isWeekend(date) {
+    const day = date.getDay(); // 0 = Minggu, 6 = Sabtu
+    return day === 0 || day === 6;
+  }
+
+  function renderNonShiftCard(now) {
+    let html = "";
+    NON_SHIFT_LIST.forEach(peg => {
+      const libur = isWeekend(now);
+      let sedangMasuk = false;
+      if (!libur) {
+        const [sh, sm] = peg.jamMulai.split(":").map(Number);
+        const [eh, em] = peg.jamSelesai.split(":").map(Number);
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        sedangMasuk = nowMin >= (sh * 60 + sm) && nowMin < (eh * 60 + em);
+      }
+      const statusClass = (!libur && sedangMasuk) ? "status-masuk" : "status-libur";
+      const statusText = libur ? "Libur (Sabtu/Minggu)" : (sedangMasuk ? "Sedang Bertugas" : "Di Luar Jam Kerja");
+
+      html += `
+        <div class="nonshift-card">
+          <div class="label">Non-Shift</div>
+          <div class="shift-title" style="font-size:22px;">${peg.nama}</div>
+          <div class="shift-time">${peg.jamMulai} – ${peg.jamSelesai} · Senin–Jumat</div>
+          <span class="status-pill ${statusClass}">${statusText}</span>
+          <div class="member-list">
+            <div class="member-row">
+              <span class="member-name">${peg.nama}</span>
+              ${waButtonHtml(peg.nik)}
+            </div>
+          </div>
+        </div>`;
+    });
+    return html;
+  }
+
+  function renderLiburCard(now) {
+    // Cek pegawai shift yang OFF hari ini (berdasarkan tanggal kalender hari ini)
+    const key = now.getFullYear() + "-" + (now.getMonth() + 1);
+    const list = JADWAL_BULANAN[key] || [];
+    const liburShift = list.filter(peg => getCodeForDate(peg.nik, now) === "OFF");
+
+    // Cek pegawai non-shift yang libur (weekend)
+    const liburNonShift = NON_SHIFT_LIST.filter(peg => isWeekend(now));
+
+    const totalLibur = liburShift.length + liburNonShift.length;
+    const tanggalLabel = now.getDate() + " " + BULAN[now.getMonth()] + " " + now.getFullYear();
+
+    let namesHtml = "";
+    if (totalLibur === 0) {
+      namesHtml = `<p class="empty-note">Tidak ada yang libur hari ini.</p>`;
+    } else {
+      liburShift.forEach(peg => {
+        namesHtml += `<div class="libur-name"><span class="libur-dot"></span>${peg.nama}</div>`;
+      });
+      liburNonShift.forEach(peg => {
+        namesHtml += `<div class="libur-name"><span class="libur-dot"></span>${peg.nama} <span style="color:#94a3b8; font-weight:400; font-size:13px;">(libur akhir pekan)</span></div>`;
+      });
+    }
+
+    return `
+      <div class="libur-card">
+        <div class="label">Libur Hari Ini · ${tanggalLabel}</div>
+        ${namesHtml}
+      </div>`;
+  }
+
+  function renderAll() {
+    const now = new Date();
+    const current = getShiftAt(now);
+    const prev = getPrevShift(current.shiftNum, current.dataDate);
+    const next = getNextShift(current.shiftNum, current.dataDate);
+
+    const wrap = document.getElementById("wrap");
+    wrap.innerHTML =
+      renderCard("Shift Sebelumnya", prev.shiftNum, prev.dataDate, false) +
+      renderCard("Shift Saat Ini", current.shiftNum, current.dataDate, true) +
+      renderCard("Shift Berikutnya", next.shiftNum, next.dataDate, false) +
+      renderNonShiftCard(now) +
+      renderLiburCard(now);
+  }
+
+  renderAll();
+  // Cek ulang tiap menit supaya kartu otomatis geser saat jam shift berganti
+  setInterval(renderAll, 60000);
+</script>
+
+</body>
+</html>
